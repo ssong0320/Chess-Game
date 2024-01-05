@@ -10,6 +10,7 @@ import java.util.ArrayList;
 public class Board extends JPanel {
 
     public int tileSize = 85;
+    public boolean getTileNum;
 
     int cols = 8;
     int rows = 8;
@@ -19,6 +20,10 @@ public class Board extends JPanel {
     public Piece selectedPiece;
 
     Input input = new Input(this);
+
+    public CheckScanner checkScanner = new CheckScanner(this);
+
+    public int enPassantTile = -1;
 
     public Board() {
         this.setPreferredSize(new Dimension(cols *tileSize, rows *tileSize));
@@ -39,18 +44,67 @@ public class Board extends JPanel {
     }
 
     public void makeMove(Move move) {
-        move.piece.col = move.newCol;
-        move.piece.row = move.newRow;
-        move.piece.xPos = move.newCol * tileSize;
-        move.piece.yPos = move.newRow * tileSize;
 
-        move.piece.isFirstMove = false;
+        if (move.piece.name.equals("Pawn")) {
+            movePawn(move);
+        } else if (move.piece.name.equals("King")) {
+            moveKing(move);
+        }
+            move.piece.col = move.newCol;
+            move.piece.row = move.newRow;
+            move.piece.xPos = move.newCol * tileSize;
+            move.piece.yPos = move.newRow * tileSize;
 
-        capture(move);
+            move.piece.isFirstMove = false;
+
+            capture(move.capture);
+
     }
 
-    public void capture(Move move) {
-        pieceList.remove(move.capture);
+    private void moveKing(Move move) {
+
+        if (Math.abs(move.piece.col - move.newCol) == 2) {
+            Piece rook;
+            if (move.piece.col < move.newCol) {
+                rook = getPiece(7, move.piece.row);
+                rook.col = 5;
+            } else {
+                rook = getPiece(0, move.piece.row);
+                rook.col = 3;
+            }
+            rook.xPos = rook.col * tileSize;
+        }
+    }
+
+    private void movePawn(Move move) {
+
+        //en passant
+        int colorIndex = move.piece.isWhite ? 1 : -1;
+
+        if (getTileNum(move.newCol, move.newRow) == enPassantTile) {
+            move.capture = getPiece(move.newCol, move.newRow + colorIndex);
+        }
+        if (Math.abs(move.piece.row - move.newRow) == 2) {
+            enPassantTile = getTileNum(move.newCol, move.newRow + colorIndex);
+        } else {
+            enPassantTile = -1;
+        }
+
+        //promotion
+        colorIndex = move.piece.isWhite ? 0 : 7;
+            if (move.newRow == colorIndex) {
+                promotePawn(move);
+            }
+
+    }
+
+    private void promotePawn(Move move) {
+        pieceList.add(new Queen(this, move.newCol, move.newRow, move.piece.isWhite));
+        capture(move.piece);
+    }
+
+    public void capture(Piece piece) {
+        pieceList.remove(piece);
     }
 
     public boolean isValidMove(Move move) {
@@ -65,6 +119,9 @@ public class Board extends JPanel {
         if (move.piece.moveCollidesWithPiece(move.newCol, move.newRow)) {
             return false;
         }
+        if (checkScanner.isKingChecked(move)) {
+            return false;
+        }
 
         return true;
     }
@@ -74,6 +131,19 @@ public class Board extends JPanel {
             return false;
         }
         return p1.isWhite == p2.isWhite;
+    }
+
+    public int getTileNum(int col, int row) {
+        return row * rows + col;
+    }
+
+    Piece findKing(boolean isWhite) {
+        for (Piece piece : pieceList) {
+            if (isWhite == piece.isWhite && piece.name.equals("King")) {
+                return piece;
+            }
+        }
+        return null;
     }
 
     public void addPieces() {
