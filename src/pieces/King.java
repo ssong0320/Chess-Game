@@ -22,7 +22,7 @@ public class King extends Piece{
         return Math.abs((col - this.col) * (row - this.row)) == 1 || Math.abs(col - this.col) + Math.abs(row - this.row) == 1 || canCastle(col, row);
     }
 
-    private boolean canCastle(int col, int Row) {
+    private boolean canCastle(int col, int row) {
         if (this.row == row) {
             if (col == 6) {
                 Piece rook = board.getPiece(7, row);
